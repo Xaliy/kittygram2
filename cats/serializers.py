@@ -23,15 +23,47 @@ class AchievementSerializer(serializers.ModelSerializer):
         fields = ('id', 'achievement_name')
 
 
+# переделываем урок 14
 class CatSerializer(serializers.ModelSerializer):
+    # теперь вернули
     achievements = AchievementSerializer(many=True, required=False)
+    # Изменили read_only=True ур 14 а потом вернули required в разделе
+    #  Валидация на уровне поля
+    # achievements = AchievementSerializer(many=True, read_only=True)
     color = serializers.ChoiceField(choices=CHOICES)
     age = serializers.SerializerMethodField()
-    
+    # добавли еще обработчик для owner, но можно добавить в моделе ур 14
+    owner = serializers.PrimaryKeyRelatedField(read_only=True)
+    # заменяем owner что бы срабатывала validators ,
+    #  есть еще второй вариант что бы обработался owner  см урок 14 
+    owner = serializers.PrimaryKeyRelatedField(
+        read_only=True, default=serializers.CurrentUserDefault())
+
     class Meta:
         model = Cat
         fields = ('id', 'name', 'color', 'birth_year', 'achievements', 'owner',
                   'age')
+        # а можно тут добавить
+        # read_only_fields = ('owner',)
+
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Cat.objects.all(),
+                fields=('name', 'owner')
+            )
+        ]
+
+    def validate(self, data):
+        if data['color'] == data['name']:
+            raise serializers.ValidationError(
+                'Имя не может совпадать с цветом!')
+        return data
+
+    def validate_birth_year(self, value):
+        year = dt.date.today().year
+        if not (year - 40 < value <= year):
+            raise serializers.ValidationError('Проверьте год рождения!')
+        return value
 
     def get_age(self, obj):
         return dt.datetime.now().year - obj.birth_year

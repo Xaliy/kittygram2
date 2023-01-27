@@ -25,7 +25,26 @@ class Cat(models.Model):
     birth_year = models.IntegerField()
     owner = models.ForeignKey(
         User, related_name='cats', on_delete=models.CASCADE)
-    achievements = models.ManyToManyField(Achievement, through='AchievementCat')
+    achievements = models.ManyToManyField(Achievement,
+                                          through='AchievementCat')
+
+# тут реализуется уникальность что бы у
+# одного автора не было двух котиков с одним именем.
+# Реализуется через мету и атрибут unique_together
+# НО атрибут unique_together может быть признан устаревшим в будущем
+    # class Meta:
+    #     unique_together = ('name', 'owner')
+
+# т.к через атрибут unique_together не советуют, а есть
+# рекомендация вместо unique_together использовать UniqueConstraint
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name', 'owner'],
+                name='unique_name_owner'
+            )
+        ]
 
     def __str__(self):
         return self.name
